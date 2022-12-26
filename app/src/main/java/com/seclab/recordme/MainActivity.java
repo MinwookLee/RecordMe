@@ -1,19 +1,27 @@
 package com.seclab.recordme;
 
+import static android.app.NotificationManager.IMPORTANCE_DEFAULT;
+
 import android.Manifest;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
-import android.content.SharedPreferences;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.View;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
-    private final String[] permissions = new String[]{
-            Manifest.permission.READ_PHONE_STATE, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.RECORD_AUDIO
-    };
+    private String[] permissions;
+    private String channelId;
+    private Notification notification;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -22,6 +30,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         findViewById(R.id.btn_func1).setOnClickListener(this);
         findViewById(R.id.btn_func2).setOnClickListener(this);
+
+        permissions = new String[]{Manifest.permission.READ_PHONE_STATE, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.RECORD_AUDIO};
+        channelId = getString(R.string.app_name);
     }
 
     @Override
@@ -36,12 +47,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    @Override
-    public void onBackPressed() {
-        super.onBackPressed();
-        minimizeThisApp();
-    }
-
     private void requestPermissions() {
         if (!hasPermissions(this, permissions)) {
             ActivityCompat.requestPermissions(this, permissions, 1);
@@ -50,13 +55,21 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private void minimizeThisApp() {
         if (hasPermissions(this, permissions)) {
-            setBoolInPref("can_record", true);
+            Intent intent = new Intent(this, CallObserver.class);
+            intent.putExtra("record", true);
+            sendBroadcast(intent);
+
+            displayNotification();
+
             finishAffinity();
         }
     }
 
     private void terminateThisApp() {
-        setBoolInPref("can_record", false);
+        Intent intent = new Intent(this, CallObserver.class);
+        intent.putExtra("record", false);
+        sendBroadcast(intent);
+
         finishAffinity();
     }
 
@@ -72,10 +85,38 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         return true;
     }
 
-    private void setBoolInPref(String key, boolean flag) {
-        SharedPreferences preferences = getSharedPreferences("pref", MODE_PRIVATE);
-        SharedPreferences.Editor editor = preferences.edit();
-        editor.putBoolean(key, flag);
-        editor.apply();
+    private void displayNotification() {
+        if (notification == null) {
+            setNotificationChannel();
+
+            NotificationCompat.Builder builder = createNotificationBuilder();
+            notification = builder.build();
+        }
+
+        NotificationManagerCompat manager = NotificationManagerCompat.from(this);
+        manager.notify(100, notification);
+    }
+
+    private void setNotificationChannel() {
+        NotificationChannel channel = new NotificationChannel(channelId, "name", IMPORTANCE_DEFAULT);
+        NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        manager.createNotificationChannel(channel);
+    }
+
+    private NotificationCompat.Builder createNotificationBuilder() {
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, channelId);
+        builder.setContentText("If you want to restore this app, Click here!");
+        builder.setContentIntent(pendingIntent);
+        builder.setOngoing(true);
+        builder.setAutoCancel(true);
+        builder.setSmallIcon(R.drawable.logo);
+        builder.setStyle(new NotificationCompat.DecoratedCustomViewStyle());
+
+        return builder;
     }
 }

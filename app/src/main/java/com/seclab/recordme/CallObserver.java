@@ -1,6 +1,5 @@
 package com.seclab.recordme;
 
-import static android.content.Context.MODE_PRIVATE;
 import static android.telephony.TelephonyManager.EXTRA_INCOMING_NUMBER;
 import static android.telephony.TelephonyManager.EXTRA_STATE;
 import static android.telephony.TelephonyManager.EXTRA_STATE_IDLE;
@@ -9,12 +8,12 @@ import static android.telephony.TelephonyManager.EXTRA_STATE_OFFHOOK;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 
 public class CallObserver extends BroadcastReceiver {
-    private String lastState;
     private final CallRecorder callRecorder;
+    private boolean canRecord;
+    private String lastState;
 
     public CallObserver() {
         callRecorder = new CallRecorder();
@@ -23,19 +22,18 @@ public class CallObserver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
-        if (!action.equals("android.intent.action.PHONE_STATE")) {
-            return;
-        }
-
-        SharedPreferences preferences = context.getSharedPreferences("pref", MODE_PRIVATE);
-        boolean canRecord = preferences.getBoolean("can_record", false);
-        if (!canRecord) {
+        if (action != null && !action.equals("android.intent.action.PHONE_STATE")) {
             return;
         }
 
         Bundle extras = intent.getExtras();
+        canRecord = canRecord && extras.getBoolean("record", false);
+        if (!canRecord) {
+            return;
+        }
+
         String nowState = extras.getString(EXTRA_STATE);
-        if (nowState.equals(lastState)) {
+        if (nowState == null || nowState.equals(lastState)) {
             return;
         } else {
             lastState = nowState;
