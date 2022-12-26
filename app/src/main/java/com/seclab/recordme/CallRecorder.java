@@ -12,11 +12,7 @@ public class CallRecorder {
     private MediaRecorder recorder;
 
     public void startRecording(Context context, String phoneNumber) {
-        String voiceDirStr = "";
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-            voiceDirStr = context.getDataDir().getAbsolutePath() + "/voice";
-        }
-
+        String voiceDirStr = context.getDataDir().getAbsolutePath() + "/voice";
         File voiceDir = new File(voiceDirStr);
         if (!voiceDir.exists()) {
             voiceDir.mkdir();
@@ -54,9 +50,8 @@ public class CallRecorder {
 
     private String getDateStr() {
         Date date = new Date(System.currentTimeMillis());
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyMMdd_hhmmss");
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyMMdd_HHmmss");
 
         return dateFormat.format(date);
     }
-
 }
